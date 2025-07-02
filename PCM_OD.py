@@ -1,3 +1,5 @@
+import streamlit as st
+
 class ParacetamolOverdoseDecision:
     def __init__(self):
         """Initialize the decision algorithm with default thresholds"""
@@ -6,44 +8,6 @@ class ParacetamolOverdoseDecision:
         self.moderate_risk_dose_threshold = 75  # mg/kg
         self.immediate_treatment_time_hours = 8  # hours since overdose
         self.blood_test_wait_time_hours = 4  # hours since overdose
-        
-    def get_patient_data(self):
-        """Collect patient information from console input"""
-        print("=== Paracetamol Overdose Treatment Decision Tool ===\n")
-        
-        try:
-            # Get basic patient information
-            age = int(raw_input("Enter patient age (years): "))
-            weight = float(raw_input("Enter patient weight (kg): "))
-            
-            # Get overdose details
-            dose_mg = float(raw_input("Enter paracetamol dose taken (mg): "))
-            time_hours = float(raw_input("Enter time since overdose (hours): "))
-            
-            # Check if staggered overdose with validation
-            while True:
-                staggered_input = raw_input("Was this a staggered overdose? (Y/N): ")
-                staggered_clean = staggered_input.upper().strip()
-                if staggered_clean in ['Y', 'N']:
-                    is_staggered = staggered_clean == 'Y'
-                    break
-                else:
-                    print("Please enter Y or N only")
-            
-            return {
-                'age': age,
-                'weight': weight,
-                'dose_mg': dose_mg,
-                'time_hours': time_hours,
-                'is_staggered': is_staggered
-            }
-            
-        except ValueError:
-            print("Error: Please enter valid numeric values")
-            return None
-        except Exception as e:
-            print("Error collecting patient data: " + str(e))
-            return None
     
     def calculate_dose_per_kg(self, dose_mg, weight):
         """Calculate paracetamol dose per kg body weight"""
@@ -119,94 +83,145 @@ class ParacetamolOverdoseDecision:
             }
         
         return decision
-    
-    def display_results(self, patient_data, decision):
-        """Display the treatment recommendation"""
-        print("\n" + "="*50)
-        print("TREATMENT RECOMMENDATION")
-        print("="*50)
-        
-        print("Patient: " + str(patient_data['age']) + " years old")
-        print("Weight: " + str(patient_data['weight']) + " kg")
-        print("Dose taken: " + str(patient_data['dose_mg']) + " mg")
-        print("Time since overdose: " + str(patient_data['time_hours']) + " hours")
-        print("Staggered overdose: " + ("Yes" if patient_data['is_staggered'] else "No"))
-        print("Dose per kg: " + str(round(decision['dose_per_kg'], 1)) + " mg/kg")
-        
-        print("\nRECOMMENDATION: " + decision['recommendation'])
-        print("REASON: " + decision['reason'])
-        
-        # Additional guidance based on recommendation
-        if decision['recommendation'] == 'START_NAC':
-            print("\n! START N-ACETYLCYSTEINE (NAC) IMMEDIATELY")
-            print("- Follow standard NAC protocol")
-            print("- Monitor liver function tests")
-        elif decision['recommendation'] == 'WAIT_FOR_BLOODS':
-            print("\n* OBTAIN BLOOD TESTS")
-            print("- Paracetamol level (plot on nomogram if <24hrs)")
-            print("- Liver function tests (ALT, AST)")
-            print("- Consider NAC if levels indicate risk")
-        elif decision['recommendation'] == 'NO_ACTION':
-            print("\n+ NO IMMEDIATE TREATMENT REQUIRED")
-            print("- Provide supportive care")
-            print("- Advise patient to return if symptoms develop")
-        
-        print("\n! DISCLAIMER: This is a decision support tool only.")
-        print("Always consider full clinical context and local guidelines.")
-    
-    def update_parameters(self):
-        """Allow modification of decision parameters"""
-        print("\n=== Update Decision Parameters ===")
-        print("Current high risk threshold: " + str(self.high_risk_dose_threshold) + " mg/kg")
-        print("Current moderate risk threshold: " + str(self.moderate_risk_dose_threshold) + " mg/kg")
-        print("Current immediate treatment time: " + str(self.immediate_treatment_time_hours) + " hours")
-        
-        try:
-            new_high = raw_input("Enter new high risk threshold (current: " + str(self.high_risk_dose_threshold) + "): ").strip()
-            if new_high:
-                self.high_risk_dose_threshold = float(new_high)
-            
-            new_moderate = raw_input("Enter new moderate risk threshold (current: " + str(self.moderate_risk_dose_threshold) + "): ").strip()
-            if new_moderate:
-                self.moderate_risk_dose_threshold = float(new_moderate)
-                
-            new_time = raw_input("Enter new immediate treatment time (current: " + str(self.immediate_treatment_time_hours) + "): ").strip()
-            if new_time:
-                self.immediate_treatment_time_hours = float(new_time)
-                
-            print("Parameters updated successfully!")
-            
-        except ValueError:
-            print("Error updating parameters. Please enter valid numbers.")
-    
-    def run(self):
-        """Main program loop"""
-        while True:
-            print("\n" + "="*50)
-            print("1. Assess patient")
-            print("2. Update parameters")
-            print("3. Exit")
-            choice = raw_input("Select option (1-3): ").strip()
-            
-            if choice == '1':
-                patient_data = self.get_patient_data()
-                if patient_data:
-                    decision = self.make_treatment_decision(patient_data)
-                    self.display_results(patient_data, decision)
-            
-            elif choice == '2':
-                self.update_parameters()
-            
-            elif choice == '3':
-                print("Goodbye!")
-                break
-            
-            else:
-                print("Invalid choice. Please select 1, 2, or 3.")
 
-
-# Main execution
-if __name__ == "__main__":
-    # Create and run the decision algorithm
+def main():
+    st.set_page_config(
+        page_title="Paracetamol Overdose Calculator",
+        page_icon="💊",
+        layout="wide"
+    )
+    
+    st.title("🏥 Paracetamol Overdose Treatment Decision Tool")
+    st.markdown("---")
+    
+    # Initialize the decision tool
     decision_tool = ParacetamolOverdoseDecision()
-    decision_tool.run()
+    
+    # Sidebar for parameters
+    st.sidebar.header("⚙️ Decision Parameters")
+    st.sidebar.markdown("Adjust the clinical thresholds:")
+    
+    decision_tool.high_risk_dose_threshold = st.sidebar.number_input(
+        "High Risk Dose Threshold (mg/kg)", 
+        value=150.0, 
+        min_value=1.0, 
+        max_value=500.0,
+        help="Dose above which immediate NAC is recommended"
+    )
+    
+    decision_tool.moderate_risk_dose_threshold = st.sidebar.number_input(
+        "Moderate Risk Dose Threshold (mg/kg)", 
+        value=75.0, 
+        min_value=1.0, 
+        max_value=300.0,
+        help="Dose above which blood tests are required"
+    )
+    
+    decision_tool.immediate_treatment_time_hours = st.sidebar.number_input(
+        "Immediate Treatment Time (hours)", 
+        value=8.0, 
+        min_value=1.0, 
+        max_value=24.0,
+        help="Time window for immediate NAC treatment"
+    )
+    
+    decision_tool.blood_test_wait_time_hours = st.sidebar.number_input(
+        "Blood Test Wait Time (hours)", 
+        value=4.0, 
+        min_value=1.0, 
+        max_value=12.0,
+        help="Minimum time to wait before blood tests"
+    )
+    
+    # Main input form
+    st.header("📋 Patient Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        age = st.number_input("Patient Age (years)", min_value=1, max_value=120, value=30)
+        weight = st.number_input("Patient Weight (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.1)
+    
+    with col2:
+        dose_mg = st.number_input("Paracetamol Dose Taken (mg)", min_value=1.0, max_value=50000.0, value=1000.0, step=100.0)
+        time_hours = st.number_input("Time Since Overdose (hours)", min_value=0.1, max_value=48.0, value=2.0, step=0.1)
+    
+    is_staggered = st.checkbox("Was this a staggered overdose?", help="Multiple doses taken over time rather than a single large dose")
+    
+    # Calculate button
+    if st.button("🔍 Calculate Treatment Recommendation", type="primary"):
+        # Prepare patient data
+        patient_data = {
+            'age': age,
+            'weight': weight,
+            'dose_mg': dose_mg,
+            'time_hours': time_hours,
+            'is_staggered': is_staggered
+        }
+        
+        # Make decision
+        decision = decision_tool.make_treatment_decision(patient_data)
+        
+        # Display results
+        st.markdown("---")
+        st.header("📊 Treatment Recommendation")
+        
+        # Patient summary
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Patient Age", str(age) + " years")
+            st.metric("Weight", str(weight) + " kg")
+        with col2:
+            st.metric("Dose Taken", str(dose_mg) + " mg")
+            st.metric("Time Since Overdose", str(time_hours) + " hours")
+        with col3:
+            st.metric("Dose per kg", str(round(decision['dose_per_kg'], 1)) + " mg/kg")
+            st.metric("Staggered Overdose", "Yes" if is_staggered else "No")
+        
+        # Recommendation
+        st.markdown("### 🎯 Recommendation")
+        
+        if decision['recommendation'] == 'START_NAC':
+            st.error("🚨 **START N-ACETYLCYSTEINE (NAC) IMMEDIATELY**")
+            st.write("**Reason:** " + decision['reason'])
+            st.markdown("""
+            **Action Required:**
+            - Start NAC protocol immediately
+            - Follow standard NAC dosing guidelines
+            - Monitor liver function tests
+            - Obtain baseline bloods if not already done
+            """)
+            
+        elif decision['recommendation'] == 'WAIT_FOR_BLOODS':
+            st.warning("🩸 **OBTAIN BLOOD TESTS**")
+            st.write("**Reason:** " + decision['reason'])
+            st.markdown("""
+            **Action Required:**
+            - Paracetamol level (plot on nomogram if < 24 hours)
+            - Liver function tests (ALT, AST, Bilirubin)
+            - Consider NAC if levels indicate risk
+            - Monitor patient clinically
+            """)
+            
+        elif decision['recommendation'] == 'NO_ACTION':
+            st.success("✅ **NO IMMEDIATE TREATMENT REQUIRED**")
+            st.write("**Reason:** " + decision['reason'])
+            st.markdown("""
+            **Action Required:**
+            - Provide supportive care
+            - Advise patient to return if symptoms develop
+            - Consider safety netting advice
+            - Document assessment clearly
+            """)
+        
+        # Disclaimer
+        st.markdown("---")
+        st.warning("""
+        ⚠️ **IMPORTANT DISCLAIMER:** 
+        This is a clinical decision support tool only. Always consider the full clinical context, 
+        patient factors, and local guidelines. This tool does not replace clinical judgment and 
+        should be used alongside appropriate medical assessment.
+        """)
+
+if __name__ == "__main__":
+    main()
